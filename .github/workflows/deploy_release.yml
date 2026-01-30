@@ -1,0 +1,117 @@
+name: Build and Deploy on Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on tags like v1.0.0, v2.1.3, etc.
+  release:
+    types: [published]  # Triggers when a release is published on GitHub
+
+permissions:
+  contents: read
+
+env:
+  DOCKER_REGISTRY: docker.io
+  DOCKER_IMAGE: jocosta96/video-processing
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ steps.set-tag.outputs.tag }}
+      image-full: ${{ steps.set-tag.outputs.full-image }}
+      is-prerelease: ${{ steps.set-tag.outputs.is-prerelease }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435
+    
+    - name: Login to Docker Hub
+      uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef
+      with:
+        registry: ${{ env.DOCKER_REGISTRY }}
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PAT }}
+    
+    - name: Determine image tag
+      id: set-tag
+      run: |
+        # Extract tag name from ref (e.g., refs/tags/v1.0.0 -> v1.0.0)
+        if [[ "${{ github.event_name }}" == "release" ]]; then
+          TAG_NAME="${{ github.event.release.tag_name }}"
+          IS_PRERELEASE="${{ github.event.release.prerelease }}"
+        else
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          # Check if tag contains pre-release indicators
+          if [[ "$TAG_NAME" =~ (alpha|beta|rc|pre) ]]; then
+            IS_PRERELEASE="true"
+          else
+            IS_PRERELEASE="false"
+          fi
+        fi
+        
+        echo "tag=${TAG_NAME}" >> $GITHUB_OUTPUT
+        echo "full-image=${{ env.DOCKER_IMAGE }}:${TAG_NAME}" >> $GITHUB_OUTPUT
+        echo "is-prerelease=${IS_PRERELEASE}" >> $GITHUB_OUTPUT
+        
+        echo "📌 Building and pushing release tag: ${TAG_NAME}"
+        echo "🔖 Pre-release: ${IS_PRERELEASE}"
+    
+    - name: Build and push Docker image with release tag
+      uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.set-tag.outputs.full-image }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64,linux/arm64
+    
+    - name: Tag as latest (production releases only)
+      if: steps.set-tag.outputs.is-prerelease == 'false'
+      uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25
+      with:
+        context: .
+        push: true
+        tags: ${{ env.DOCKER_IMAGE }}:latest
+        cache-from: type=gha
+        platforms: linux/amd64,linux/arm64
+    
+    - name: Build Summary
+      run: |
+        echo "✅ Docker image build completed successfully!"
+        echo "🐳 Image: ${{ steps.set-tag.outputs.full-image }}"
+        echo "📋 Tag: ${{ steps.set-tag.outputs.tag }}"
+        echo "🔖 Pre-release: ${{ steps.set-tag.outputs.is-prerelease }}"
+        echo "🚀 Trigger: ${{ github.event_name }}"
+        echo "🌿 Ref: ${{ github.ref }}"
+        echo ""
+        
+        if [[ "${{ steps.set-tag.outputs.is-prerelease }}" == "false" ]]; then
+          echo "🎯 Production Release:"
+          echo "   - Release tag: ${{ steps.set-tag.outputs.tag }}"
+          echo "   - Also tagged as: latest"
+          echo "   - Image pushed to Docker Hub"
+          echo "   - Ready for production deployment"
+        else
+          echo "🧪 Pre-release Build:"
+          echo "   - Pre-release tag: ${{ steps.set-tag.outputs.tag }}"
+          echo "   - NOT tagged as latest"
+          echo "   - Image pushed to Docker Hub"
+          echo "   - Use for testing before production"
+        fi
+        
+        echo ""
+        echo "📦 Available Images:"
+        echo "   - docker pull ${{ steps.set-tag.outputs.full-image }}"
+        if [[ "${{ steps.set-tag.outputs.is-prerelease }}" == "false" ]]; then
+          echo "   - docker pull ${{ env.DOCKER_IMAGE }}:latest"
+        fi
+        echo ""
+        echo "🏗️  Next Steps:"
+        echo "   - Update Kubernetes manifests with the new tag"
+        echo "   - Deploy using: kubectl set image deployment/dpm-app app=${{ steps.set-tag.outputs.full-image }}"
+        echo "   - Or use your infrastructure automation pipeline"
