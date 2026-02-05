@@ -120,7 +120,7 @@ jobs:
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 092649322140.dkr.ecr.us-east-1.amazonaws.com
 
           # tag
-          docker tag dockerhub/catalog/jocosta96/catalog-microservice:latest $DPM_IMAGE:latest
+          docker tag dockerhub/video-processing:latest $DPM_IMAGE:latest
 
           #Run the following command to push this image to your newly created AWS repository:
           docker push $DPM_IMAGE:latest
