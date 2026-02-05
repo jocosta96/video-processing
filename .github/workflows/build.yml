@@ -66,14 +66,22 @@ jobs:
       - name: Deploy manifests to bastion
         env:
           BASTION_IP: ${{ steps.bastion.outputs.ip }}
+          DEFAULT_REGION: ${{ secrets.DEFAULT_REGION }}
+        run: |
+
+          scp -r -o StrictHostKeyChecking=no -i bastion_key.pem .github/manifests ec2-user@$BASTION_IP:/home/ec2-user/
+
+      - name: Deploy to kubernetes
+        env:
+          BASTION_IP: ${{ steps.bastion.outputs.ip }}
           SERVICE: video-processing
           DPM_IMAGE: ${{ steps.bastion.outputs.ecr_url }}
           NLB_TARGET_GROUP_ARN: ${{ steps.bastion.outputs.nlb_arn }}
           DEFAULT_REGION: ${{ secrets.DEFAULT_REGION }}
         run: |
 
-          scp -r -o StrictHostKeyChecking=no -i bastion_key.pem .github/manifests ec2-user@$BASTION_IP:/home/ec2-user/
-          ssh -o StrictHostKeyChecking=no -i bastion_key.pem ec2-user@$BASTION_IP << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i bastion_key.pem ec2-user@$BASTION_IP 
+          aws eks update-kubeconfig --region $DEFAULT_REGION --name $SERVICE-eks-cluster --alias $SERVICE << 'EOF'
           
           # Create temporary directory for manifests
           TEMP_DIR=$(mktemp -d)
