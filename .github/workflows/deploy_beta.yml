@@ -62,3 +62,38 @@ jobs:
         echo "📦 Next Steps:"
         echo "   - Team can pull with: docker pull ${{ steps.set-tag.outputs.full-image }}"
         echo "   - Use this image for testing in ephemeral environments"
+
+  
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+        aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+        role-duration-seconds: 3600
+
+    - name: Get SSM Data
+      id: bastion
+      run: |
+        ECR_URL=$(aws ssm get-parameter --name "/video-processing/ecr/url" --query 'Parameter.Value' --output text)
+        echo "ecr_url=$ECR_URL" >> $GITHUB_OUTPUT        
+
+    - name: Get EC2 instance key
+      run: |
+        echo $TF_VAR_ssh_key_pair_value > bastion_key.pem
+        chmod 600 bastion_key.pem
+
+    - name: Push to ECR
+      env:
+        DPM_IMAGE: ${{ steps.bastion.outputs.ecr_url }}
+        TAG: ${{ steps.set-tag.outputs.tag }}
+      run: |
+          #  Retrieve an authentication token and authenticate your Docker client to your registry. Use the AWS CLI:
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 092649322140.dkr.ecr.us-east-1.amazonaws.com
+
+          # tag
+          docker tag dockerhub/catalog/jocosta96/catalog-microservice:$TAG $DPM_IMAGE:$TAG
+
+          #Run the following command to push this image to your newly created AWS repository:
+          docker push $DPM_IMAGE:$TAG
