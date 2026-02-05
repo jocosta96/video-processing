@@ -50,7 +50,7 @@ jobs:
       - name: Get SSM Data
         id: bastion
         run: |
-          BASTION_IP=$(aws ssm get-parameter --name "/video-processing/bastion/public_ip" --query 'Parameter.Value' --output text)
+          BASTION_IP=$(aws ssm get-parameter --name "/video-processing/bastion/public_dns" --query 'Parameter.Value' --output text)
           NLB_ARN=$(aws ssm get-parameter --name "/video-processing/nlb/arn" --query 'Parameter.Value' --output text)
           ECR_URL=$(aws ssm get-parameter --name "/video-processing/ecr/url" --query 'Parameter.Value' --output text)
 
@@ -71,8 +71,8 @@ jobs:
           NLB_TARGET_GROUP_ARN: ${{ steps.bastion.outputs.nlb_arn }}
           DEFAULT_REGION: ${{ secrets.DEFAULT_REGION }}
         run: |
-          scp -o StrictHostKeyChecking=no -i bastion_key.pem -r .github/manifests ec2-user@$BASTION_IP.compute-1.amazonaws.com:/home/ec2-user/
-          ssh -o StrictHostKeyChecking=no -i bastion_key.pem ec2-user@$BASTION_IP.compute-1.amazonaws.com << 'EOF'
+          scp -o StrictHostKeyChecking=no -i bastion_key.pem -r .github/manifests ec2-user@$BASTION_IP:/home/ec2-user/
+          ssh -o StrictHostKeyChecking=no -i bastion_key.pem ec2-user@$BASTION_IP << 'EOF'
           
           # Create temporary directory for manifests
           TEMP_DIR=$(mktemp -d)
