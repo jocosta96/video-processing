@@ -70,7 +70,7 @@ jobs:
           DEFAULT_REGION: ${{ secrets.DEFAULT_REGION }}
         run: |
 
-          scp -r -o StrictHostKeyChecking=no -i ~.ssh/bastion_key.pem .github/manifests ec2-user@$BASTION_IP:/home/ec2-user/
+          scp -r -o StrictHostKeyChecking=no -i ~.ssh/bastion_key.pem ec2-user@$BASTION_IP:/home/ec2-user/manifests/ .github/manifests 
 
       - name: Deploy to kubernetes
         env:
