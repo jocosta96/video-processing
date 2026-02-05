@@ -60,7 +60,8 @@ jobs:
 
       - name: Get EC2 instance key
         run: |
-          echo $TF_VAR_ssh_key_pair_value > bastion_key.pem
+          mkdirs ~.ssh/
+          echo $TF_VAR_ssh_key_pair_value > ~.ssh/bastion_key.pem
           chmod 600 bastion_key.pem
 
       - name: Deploy manifests to bastion
@@ -69,7 +70,7 @@ jobs:
           DEFAULT_REGION: ${{ secrets.DEFAULT_REGION }}
         run: |
 
-          scp -r -o StrictHostKeyChecking=no -i bastion_key.pem .github/manifests ec2-user@$BASTION_IP:/home/ec2-user/
+          scp -r -o StrictHostKeyChecking=no -i ~.ssh/bastion_key.pem .github/manifests ec2-user@$BASTION_IP:/home/ec2-user/
 
       - name: Deploy to kubernetes
         env:
@@ -80,7 +81,7 @@ jobs:
           DEFAULT_REGION: ${{ secrets.DEFAULT_REGION }}
         run: |
 
-          ssh -o StrictHostKeyChecking=no -i bastion_key.pem ec2-user@$BASTION_IP 
+          ssh -o StrictHostKeyChecking=no -i ~.ssh/bastion_key.pem ec2-user@$BASTION_IP 
           aws eks update-kubeconfig --region $DEFAULT_REGION --name $SERVICE-eks-cluster --alias $SERVICE << 'EOF'
           
           # Create temporary directory for manifests
@@ -113,4 +114,4 @@ jobs:
           rm -rf $TEMP_DIR
           EOF
           
-          rm bastion_key.pem
+          rm ~.ssh/bastion_key.pem
