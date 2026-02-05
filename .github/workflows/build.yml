@@ -2,6 +2,14 @@ name: Build and Deploy
 
 on:
   workflow_dispatch: {}
+#remove before merge
+
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
 env:
   TF_VERSION: "1.14.1"
 
@@ -63,7 +71,8 @@ jobs:
           NLB_TARGET_GROUP_ARN: ${{ steps.bastion.outputs.nlb_arn }}
           DEFAULT_REGION: ${{ secrets.DEFAULT_REGION }}
         run: |
-          ssh -o StrictHostKeyChecking=no -i bastion_key.pem ec2-user@$BASTION_IP << 'EOF'
+          scp -o StrictHostKeyChecking=no -i bastion_key.pem -r manifests ec2-user@$BASTION_IP.compute-1.amazonaws.com:/home/ec2-user/
+          ssh -o StrictHostKeyChecking=no -i bastion_key.pem ec2-user@$BASTION_IP.compute-1.amazonaws.com << 'EOF'
           
           # Create temporary directory for manifests
           TEMP_DIR=$(mktemp -d)
