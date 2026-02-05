@@ -118,11 +118,10 @@ jobs:
         TAG: latest
         DOCKER_IMAGE: ${{ steps.set-tag.outputs.full-image }}
       run: |
+          docker build . -t $DPM_IMAGE:$TAG
+
           #  Retrieve an authentication token and authenticate your Docker client to your registry. Use the AWS CLI:
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 092649322140.dkr.ecr.us-east-1.amazonaws.com
-
-          # tag
-          docker tag $DOCKER_IMAGE $DPM_IMAGE:$TAG
 
           #Run the following command to push this image to your newly created AWS repository:
           docker push $DPM_IMAGE:$TAG
