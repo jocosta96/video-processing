@@ -60,7 +60,7 @@ jobs:
 
       - name: Get EC2 instance key
         run: |
-          mkdirs ~.ssh/
+          mkdir -p ~.ssh/
           echo $TF_VAR_ssh_key_pair_value > ~.ssh/bastion_key.pem
           chmod 600 bastion_key.pem
 
