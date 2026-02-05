@@ -1,0 +1,101 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  TF_VERSION: "1.14.1"
+
+  # GitHub metadata (captured once)
+  GH_ACTOR: ${{ github.actor }}
+  GH_EVENT_NAME: ${{ github.event_name }}
+  GH_REF: ${{ github.ref }}
+  GH_REF_NAME: ${{ github.ref_name }}
+  TF_VAR_ssh_key_pair_value: ${{ secrets.VIDEO_PROCESSING_SSH_KEY_PAIR_VALUE }}
+  TF_VAR_app_image_tag: ${{ vars.TF_VAR_VIDEO_PROCESSING_APP_IMAGE_TAG }}
+  TF_VAR_app_image_name: ${{ vars.TF_VAR_VIDEO_PROCESSING_APP_IMAGE_NAME }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+          role-duration-seconds: 3600
+
+      - name: Get SSM Data
+        id: bastion
+        run: |
+          BASTION_IP=$(aws ssm get-parameter --name "/video-processing/bastion/public_ip" --query 'Parameter.Value' --output text)
+          NLB_ARN=$(aws ssm get-parameter --name "/video-processing/nlb/arn" --query 'Parameter.Value' --output text)
+          ECR_URL=$(aws ssm get-parameter --name "/video-processing/ecr/url" --query 'Parameter.Value' --output text)
+
+          echo "ip=$BASTION_IP" >> $GITHUB_OUTPUT
+          echo "nlb_arn=$NLB_ARN" >> $GITHUB_OUTPUT
+          echo "ecr_url=$ECR_URL" >> $GITHUB_OUTPUT        
+
+      - name: Get EC2 instance key
+        run: |
+          echo $TF_VAR_ssh_key_pair_value > bastion_key.pem
+          chmod 600 bastion_key.pem
+
+      - name: Deploy manifests to bastion
+        env:
+          BASTION_IP: ${{ steps.bastion.outputs.ip }}
+          SERVICE: video-processing
+          DPM_IMAGE: ${{ steps.bastion.outputs.ecr_url }}
+          NLB_TARGET_GROUP_ARN: ${{ steps.bastion.outputs.nlb_arn }}
+          DEFAULT_REGION: ${{ secrets.DEFAULT_REGION }}
+        run: |
+          ssh -o StrictHostKeyChecking=no -i bastion_key.pem ec2-user@$BASTION_IP << 'EOF'
+          
+          # Create temporary directory for manifests
+          TEMP_DIR=$(mktemp -d)
+          cd $TEMP_DIR
+          
+          # Function to substitute variables in manifest
+          substitute_vars() {
+            local file=$1
+            sed \
+              -e "s|\${dpm_name}|dpm-${SERVICE}|g" \
+              -e "s|\${cfm_name}|cfm-database-${SERVICE}|g" \
+              -e "s|\${sec_name}|sec-app-${SERVICE}|g" \
+              -e "s|\${app_sec_name}|sec-app-${SERVICE}|g" \
+              -e "s|\${dpm_image}|${DPM_IMAGE}|g" \
+              -e "s|\${load_balancer_name}|svc-app-lb-${SERVICE}|g" \
+              -e "s|\${target_group_arn}|${NLB_TARGET_GROUP_ARN}|g" \
+              -e "s|\${tgb_name}|tgb-${SERVICE}|g" \
+              -e "s|\${hpa_name}|hpa-app-${SERVICE}|g" \
+              -e "s|\${region}|${DEFAULT_REGION}|g" \
+              "$file"
+          }
+          
+          # Deploy manifests in order
+          for manifest in cfm_database.yaml sec_app.yaml svc_app.yaml dpm_app.yaml hpa_app.yaml nlb_tgb.yaml; do
+            echo "Deploying $manifest..."
+            substitute_vars "/home/ec2-user/manifests/$manifest" | kubectl apply -f -
+          done
+          
+          rm -rf $TEMP_DIR
+          EOF
+          
+          rm bastion_key.pem
