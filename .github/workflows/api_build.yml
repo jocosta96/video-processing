@@ -1,4 +1,4 @@
-name: Build and Deploy
+name: API Build and Deploy
 
 on:
   workflow_dispatch: {}
@@ -6,6 +6,8 @@ on:
 
   pull_request:
     branches: [ "main" ]
+    paths:
+      - 'fiapx-api'
 
 permissions:
   contents: read
@@ -19,8 +21,8 @@ env:
   GH_REF: ${{ github.ref }}
   GH_REF_NAME: ${{ github.ref_name }}
   TF_VAR_ssh_key_pair_value: ${{ secrets.VIDEO_PROCESSING_SSH_KEY_PAIR_VALUE }}
-  TF_VAR_app_image_tag: ${{ vars.TF_VAR_VIDEO_PROCESSING_APP_IMAGE_TAG }}
-  TF_VAR_app_image_name: ${{ vars.TF_VAR_VIDEO_PROCESSING_APP_IMAGE_NAME }}
+  TF_VAR_app_image_tag: ${{ vars.API_IMAGE_NAME }}
+  TF_VAR_app_image_name: ${{ vars.API_IMAGE_TAG }}
 
 jobs:
   deploy:
@@ -28,7 +30,9 @@ jobs:
     permissions:
       id-token: write
       contents: read
-
+    defaults:
+      run:
+        working-directory: ./fiapx-api
     steps:
       - name: Checkout
         uses: actions/checkout@v4

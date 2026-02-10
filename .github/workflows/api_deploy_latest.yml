@@ -1,8 +1,10 @@
-name: Build and Push Docker Image
+name: API Build and Push Docker Image
 
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'fiapx-api'
   workflow_dispatch: {}
 
 permissions:
@@ -16,6 +18,9 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./fiapx-api
     outputs:
       image-tag: ${{ steps.set-tag.outputs.tag }}
       image-full: ${{ steps.set-tag.outputs.full-image }}

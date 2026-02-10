@@ -1,9 +1,10 @@
-name: Build and Push Beta Image for PRs
+name: API Build and Push Beta Image for PRs
 
 on:
   pull_request:
     branches: [ "main" ]
-
+    paths:
+      - 'fiapx-api'
 permissions:
   contents: read
 
@@ -17,7 +18,9 @@ jobs:
     # Only run for PRs coming from branches in this repository (not forks),
     # so secrets like DOCKER_PAT are available. For forked PRs, the job is skipped.
     runs-on: ubuntu-latest
-
+    defaults:
+      run:
+        working-directory: ./fiapx-api
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
