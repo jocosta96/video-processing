@@ -23,6 +23,7 @@ env:
   TF_VAR_ssh_key_pair_value: ${{ secrets.VIDEO_PROCESSING_SSH_KEY_PAIR_VALUE }}
   TF_VAR_app_image_tag: ${{ vars.API_IMAGE_NAME }}
   TF_VAR_app_image_name: ${{ vars.API_IMAGE_TAG }}
+  ECR_URL: 092649322140.dkr.ecr.us-east-1.amazonaws.com/dockerhub/video-processing
 
 jobs:
   deploy:
@@ -56,7 +57,7 @@ jobs:
         run: |
           BASTION_IP=$(aws ssm get-parameter --name "/video-processing/bastion/public_dns" --query 'Parameter.Value' --output text)
           NLB_ARN=$(aws ssm get-parameter --name "/video-processing/nlb/arn" --query 'Parameter.Value' --output text)
-          ECR_URL=$(aws ssm get-parameter --name "/video-processing/ecr/url" --query 'Parameter.Value' --output text)
+          ECR_URL=${{ env.ECR_URL }}
 
           echo "ip=$BASTION_IP" >> $GITHUB_OUTPUT
           echo "nlb_arn=$NLB_ARN" >> $GITHUB_OUTPUT

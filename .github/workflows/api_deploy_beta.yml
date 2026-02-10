@@ -11,6 +11,7 @@ permissions:
 env:
   DOCKER_REGISTRY: docker.io
   DOCKER_IMAGE: jocosta96/video-processing
+  ECR_URL: 092649322140.dkr.ecr.us-east-1.amazonaws.com/dockerhub/video-processing
   TAG_NAME: ${{ github.actor }}
   TF_VAR_ssh_key_pair_value: ${{ secrets.VIDEO_PROCESSING_SSH_KEY_PAIR_VALUE }}
 
@@ -79,7 +80,7 @@ jobs:
     - name: Get SSM Data
       id: bastion
       run: |
-        ECR_URL=$(aws ssm get-parameter --name "/video-processing/ecr/url" --query 'Parameter.Value' --output text)
+        ECR_URL=${{ env.ECR_URL }}
         echo "ecr_url=$ECR_URL" >> $GITHUB_OUTPUT        
 
     - name: Get EC2 instance key
