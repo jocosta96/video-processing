@@ -4,11 +4,11 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      - 'fiapx-api'
+      - 'fiapx-api/**/*'
   pull_request:
     branches: [ "main" ]
     paths:
-      - 'fiapx-api'
+      - 'fiapx-api/**/*'
 
 permissions:
   contents: read
