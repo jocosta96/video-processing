@@ -64,9 +64,9 @@ jobs:
 
       - name: Get EC2 instance key
         run: |
-          mkdir -p ~.ssh/
-          echo $TF_VAR_ssh_key_pair_value > ~.ssh/bastion_key.pem
-          chmod 600 ~.ssh/bastion_key.pem
+          mkdir -p ~/.ssh
+          echo "$TF_VAR_ssh_key_pair_value" > ~/.ssh/bastion_key.pem
+          chmod 600 ~/.ssh/bastion_key.pem
 
       - name: Deploy manifests to bastion
         env:
