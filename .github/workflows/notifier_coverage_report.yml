@@ -1,18 +1,18 @@
-name: API Coverage Report
+name: Notifier Coverage Report
 
 env:
-  SERVICE_PATH: fiapx-api
-  SERVICE_NAME: api
+  SERVICE_PATH: fiapx-notifier
+  SERVICE_NAME: notifier
 
 on:
   push:
     branches: [ "main" ]
     paths:
-      - 'fiapx-api/**/*'
+      - 'fiapx-notifier/**/*'
   pull_request:
     branches: [ "main" ]
     paths:
-      - 'fiapx-api/**/*'
+      - 'fiapx-notifier/**/*'
 
 permissions:
   contents: read

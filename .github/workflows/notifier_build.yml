@@ -1,17 +1,17 @@
-name: API Build and Deploy
+name: Notifier Build and Deploy
 
 env:
-  SERVICE_PATH: fiapx-api
-  SERVICE_NAME: api
+  SERVICE_PATH: fiapx-notifier
+  SERVICE_NAME: notifier
   TF_VERSION: "1.14.1"
-  ECR_URL: 092649322140.dkr.ecr.us-east-1.amazonaws.com/dockerhub/video-processing
+  ECR_URL: 092649322140.dkr.ecr.us-east-1.amazonaws.com/dockerhub/video-processing-notifier
 
 on:
   workflow_dispatch: {}
   pull_request:
     branches: [ "main" ]
     paths:
-      - 'fiapx-api/**/*'
+      - 'fiapx-notifier/**/*'
 
 permissions:
   contents: read

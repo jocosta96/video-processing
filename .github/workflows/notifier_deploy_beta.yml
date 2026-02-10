@@ -1,19 +1,18 @@
-name: API Build and Push Docker Image
+name: Notifier Build and Push Beta Image for PRs
 
 env:
-  SERVICE_PATH: fiapx-api
-  SERVICE_NAME: api
+  SERVICE_PATH: fiapx-notifier
+  SERVICE_NAME: notifier
   DOCKER_REGISTRY: docker.io
-  DOCKER_IMAGE: jocosta96/video-processing
-  ECR_URL: 092649322140.dkr.ecr.us-east-1.amazonaws.com/dockerhub/video-processing
-  EVENT_NAME: ${{ github.event_name }}
+  DOCKER_IMAGE: jocosta96/video-processing-notifier
+  ECR_URL: 092649322140.dkr.ecr.us-east-1.amazonaws.com/dockerhub/video-processing-notifier
+  TAG_NAME: ${{ github.actor }}
 
 on:
-  push:
+  pull_request:
     branches: [ "main" ]
     paths:
-      - 'fiapx-api/**/*'
-  workflow_dispatch: {}
+      - 'fiapx-notifier/**/*'
 
 permissions:
   contents: read
@@ -24,41 +23,28 @@ jobs:
     defaults:
       run:
         working-directory: ${{ env.SERVICE_PATH }}
-    outputs:
-      image-tag: ${{ steps.set-tag.outputs.tag }}
-      image-full: ${{ steps.set-tag.outputs.full-image }}
-    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435
-    
+
     - name: Login to Docker Hub
       uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef
       with:
         registry: ${{ env.DOCKER_REGISTRY }}
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PAT }}
-    
-    - name: Determine image tag
+
+    - name: Determine beta image tag
       id: set-tag
       run: |
-        if [[ "${{ env.EVENT_NAME }}" == "workflow_dispatch" ]]; then
-          TAG_NAME="latest"
-          echo "tag=${TAG_NAME}" >> $GITHUB_OUTPUT
-          echo "full-image=${{ env.DOCKER_IMAGE }}:${TAG_NAME}" >> $GITHUB_OUTPUT
-          echo "Building and pushing with manual tag: ${TAG_NAME}"
-        elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-          echo "tag=latest" >> $GITHUB_OUTPUT
-          echo "full-image=${{ env.DOCKER_IMAGE }}:latest" >> $GITHUB_OUTPUT
-          echo "Building and pushing with tag: latest"
-        else
-          echo "No image build needed for this event: ${{ github.event_name }}"
-          exit 1
-        fi
-    
+        TAG_NAME="${{ env.TAG_NAME }}"
+        echo "tag=${TAG_NAME}" >> $GITHUB_OUTPUT
+        echo "full-image=${{ env.DOCKER_IMAGE }}:${TAG_NAME}" >> $GITHUB_OUTPUT
+        echo "Building and pushing beta tag: ${TAG_NAME}"
+
     - name: Build and push Docker image
       uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25
       with:
@@ -68,37 +54,19 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
         platforms: linux/amd64,linux/arm64
-    
+
     - name: Build Summary
       run: |
-        echo "✅ Docker image build completed successfully!"
+        echo "✅ Beta Docker image build completed successfully!"
         echo "🐳 Image: ${{ steps.set-tag.outputs.full-image }}"
         echo "📋 Tag: ${{ steps.set-tag.outputs.tag }}"
         echo "🚀 Trigger: ${{ github.event_name }}"
-        echo "🌿 Branch/Tag: ${{ github.ref }}"
-        echo ""
-        
-        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-          echo "🎯 Manual Build:"
-          echo "   - Custom tag: ${{ steps.set-tag.outputs.tag }}"
-          echo "   - Image pushed to Docker Hub"
-          echo "   - Ready for infrastructure deployment"
-        else
-          echo "📦 Automatic Build:"
-          echo "   - Image pushed to Docker Hub"
-          echo "   - Ready for infrastructure deployment"
-        fi
-        
+        echo "🌿 PR: #${{ github.event.pull_request.number }} by ${{ github.actor }}"
         echo ""
         echo "📦 Next Steps:"
-        echo "   - Image is available on Docker Hub"
-        echo "   - Use this image in your infrastructure repository deployment"
-        echo "   - Image can be pulled with: docker pull ${{ steps.set-tag.outputs.full-image }}"
-        echo ""
-        echo "🏗️  Infrastructure Deployment:"
-        echo "   - Update your infrastructure repository with the new image tag"
-        echo "   - Deploy using your infrastructure automation"
-  
+        echo "   - Team can pull with: docker pull ${{ steps.set-tag.outputs.full-image }}"
+        echo "   - Use this image for testing in ephemeral environments"
+
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a
       with:
@@ -123,7 +91,7 @@ jobs:
     - name: Push to ECR
       env:
         DPM_IMAGE: ${{ steps.bastion.outputs.ecr_url }}
-        TAG: latest
+        TAG: ${{ steps.set-tag.outputs.tag }}
         DOCKER_IMAGE: ${{ steps.set-tag.outputs.full-image }}
       run: |
           docker build . -t $DPM_IMAGE:$TAG

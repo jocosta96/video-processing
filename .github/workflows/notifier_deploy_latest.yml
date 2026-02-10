@@ -1,18 +1,18 @@
-name: API Build and Push Docker Image
+name: Notifier Build and Push Docker Image
 
 env:
-  SERVICE_PATH: fiapx-api
-  SERVICE_NAME: api
+  SERVICE_PATH: fiapx-notifier
+  SERVICE_NAME: notifier
   DOCKER_REGISTRY: docker.io
-  DOCKER_IMAGE: jocosta96/video-processing
-  ECR_URL: 092649322140.dkr.ecr.us-east-1.amazonaws.com/dockerhub/video-processing
+  DOCKER_IMAGE: jocosta96/video-processing-notifier
+  ECR_URL: 092649322140.dkr.ecr.us-east-1.amazonaws.com/dockerhub/video-processing-notifier
   EVENT_NAME: ${{ github.event_name }}
 
 on:
   push:
     branches: [ "main" ]
     paths:
-      - 'fiapx-api/**/*'
+      - 'fiapx-notifier/**/*'
   workflow_dispatch: {}
 
 permissions:

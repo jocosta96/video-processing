@@ -1,28 +1,28 @@
 name: API Build and Push Beta Image for PRs
 
+env:
+  SERVICE_PATH: fiapx-api
+  SERVICE_NAME: api
+  DOCKER_REGISTRY: docker.io
+  DOCKER_IMAGE: jocosta96/video-processing
+  ECR_URL: 092649322140.dkr.ecr.us-east-1.amazonaws.com/dockerhub/video-processing
+  TAG_NAME: ${{ github.actor }}
+
 on:
   pull_request:
     branches: [ "main" ]
     paths:
       - 'fiapx-api/**/*'
+
 permissions:
   contents: read
 
-env:
-  DOCKER_REGISTRY: docker.io
-  DOCKER_IMAGE: jocosta96/video-processing
-  ECR_URL: 092649322140.dkr.ecr.us-east-1.amazonaws.com/dockerhub/video-processing
-  TAG_NAME: ${{ github.actor }}
-  TF_VAR_ssh_key_pair_value: ${{ secrets.VIDEO_PROCESSING_SSH_KEY_PAIR_VALUE }}
-
 jobs:
   build-and-push:
-    # Only run for PRs coming from branches in this repository (not forks),
-    # so secrets like DOCKER_PAT are available. For forked PRs, the job is skipped.
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./fiapx-api
+        working-directory: ${{ env.SERVICE_PATH }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -40,7 +40,6 @@ jobs:
     - name: Determine beta image tag
       id: set-tag
       run: |
-        # Use the actor (PR author) as the tag name
         TAG_NAME="${{ env.TAG_NAME }}"
         echo "tag=${TAG_NAME}" >> $GITHUB_OUTPUT
         echo "full-image=${{ env.DOCKER_IMAGE }}:${TAG_NAME}" >> $GITHUB_OUTPUT
@@ -49,7 +48,7 @@ jobs:
     - name: Build and push Docker image
       uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25
       with:
-        context: ./fiapx-api
+        context: ${{ env.SERVICE_PATH }}
         push: true
         tags: ${{ steps.set-tag.outputs.full-image }}
         cache-from: type=gha
@@ -86,7 +85,7 @@ jobs:
     - name: Get EC2 instance key
       run: |
         mkdir -p ~/.ssh
-        echo "$TF_VAR_ssh_key_pair_value" > ~/.ssh/bastion_key.pem
+        echo "${{ secrets.VIDEO_PROCESSING_SSH_KEY_PAIR_VALUE }}" > ~/.ssh/bastion_key.pem
         chmod 600 ~/.ssh/bastion_key.pem
 
     - name: Push to ECR
@@ -97,8 +96,6 @@ jobs:
       run: |
           docker build . -t $DPM_IMAGE:$TAG
 
-          #  Retrieve an authentication token and authenticate your Docker client to your registry. Use the AWS CLI:
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 092649322140.dkr.ecr.us-east-1.amazonaws.com
 
-          #Run the following command to push this image to your newly created AWS repository:
           docker push $DPM_IMAGE:$TAG

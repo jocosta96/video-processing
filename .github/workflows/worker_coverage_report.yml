@@ -1,18 +1,18 @@
-name: API Coverage Report
+name: Worker Coverage Report
 
 env:
-  SERVICE_PATH: fiapx-api
-  SERVICE_NAME: api
+  SERVICE_PATH: fiapx-worker
+  SERVICE_NAME: worker
 
 on:
   push:
     branches: [ "main" ]
     paths:
-      - 'fiapx-api/**/*'
+      - 'fiapx-worker/**/*'
   pull_request:
     branches: [ "main" ]
     paths:
-      - 'fiapx-api/**/*'
+      - 'fiapx-worker/**/*'
 
 permissions:
   contents: read
