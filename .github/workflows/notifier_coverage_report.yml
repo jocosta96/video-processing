@@ -1,0 +1,44 @@
+name: Notifier Coverage Report
+
+env:
+  SERVICE_PATH: fiapx-notifier
+  SERVICE_NAME: notifier
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'fiapx-notifier/**/*'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'fiapx-notifier/**/*'
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.SERVICE_PATH }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-cov
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    - name: test and check coverage
+      run: |
+        pytest
+    - name: Run codacy-coverage-reporter
+      uses: codacy/codacy-coverage-reporter-action@89d6c85cfafaec52c72b6c5e8b2878d33104c699
+      with:
+        project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+        coverage-reports: ${{ env.SERVICE_PATH }}/coverage.xml
