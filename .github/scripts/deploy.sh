@@ -13,6 +13,10 @@ CLUSTER_CA=$(aws eks describe-cluster --region $DEFAULT_REGION --name $SERVICE-e
 # Get authentication token
 TOKEN=$(aws eks get-token --region $DEFAULT_REGION --cluster-name $SERVICE-eks-cluster --query 'status.token' --output text)
 
+# Write CA cert to temp file
+CA_FILE=$(mktemp)
+echo "$CLUSTER_CA" | base64 -d > $CA_FILE
+
 TEMP_DIR=$(mktemp -d)
 cd $TEMP_DIR
 
@@ -32,9 +36,9 @@ for manifest in cfm_database.yaml sec_app.yaml svc_app.yaml dpm_app.yaml hpa_app
     "/home/ec2-user/manifests/$manifest" | \
     kubectl apply --validate=false \
       --server="$CLUSTER_ENDPOINT" \
-      --certificate-authority=<(echo "$CLUSTER_CA" | base64 -d) \
+      --certificate-authority="$CA_FILE" \
       --token="$TOKEN" \
       -f -
 done
 
-rm -rf $TEMP_DIR
+rm -rf $TEMP_DIR $CA_FILE
