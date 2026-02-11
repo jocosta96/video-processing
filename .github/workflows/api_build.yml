@@ -75,8 +75,8 @@ jobs:
           NLB_TARGET_GROUP_ARN: ${{ steps.bastion.outputs.nlb_arn }}
           DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
         run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/bastion_key.pem ec2-user@$BASTION_IP 
-          aws eks update-kubeconfig --region $DEFAULT_REGION --name $SERVICE-eks-cluster --alias $SERVICE << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/bastion_key.pem ec2-user@$BASTION_IP << 'EOF'
+          aws eks update-kubeconfig --region $DEFAULT_REGION --name $SERVICE-eks-cluster --alias $SERVICE
           
           TEMP_DIR=$(mktemp -d)
           cd $TEMP_DIR
