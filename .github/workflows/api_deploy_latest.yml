@@ -131,3 +131,4 @@ jobs:
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 092649322140.dkr.ecr.us-east-1.amazonaws.com
 
           docker push $DPM_IMAGE:$TAG
+
