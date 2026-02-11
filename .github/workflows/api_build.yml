@@ -65,7 +65,8 @@ jobs:
           BASTION_IP: ${{ steps.bastion.outputs.ip }}
           DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
         run: |
-          scp -r -o StrictHostKeyChecking=no -i ~/.ssh/bastion_key.pem ../.github/manifests/* ec2-user@$BASTION_IP:/home/ec2-user/manifests/ 
+          scp -r -o StrictHostKeyChecking=no -i ~/.ssh/bastion_key.pem ../.github/manifests/* ec2-user@$BASTION_IP:/home/ec2-user/manifests/
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/bastion_key.pem ../.github/scripts/fix_kubeconfig.py ec2-user@$BASTION_IP:/home/ec2-user/ 
 
       - name: Deploy to kubernetes
         env:
@@ -77,8 +78,7 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/bastion_key.pem ec2-user@$BASTION_IP << EOF
           aws eks update-kubeconfig --region $DEFAULT_REGION --name $SERVICE-eks-cluster --alias $SERVICE
-          sed -i 's/client.authentication.k8s.io\/v1alpha1/client.authentication.k8s.io\/v1beta1/g' ~/.kube/config
-          sed -i 's/apiVersion: v1alpha1/apiVersion: v1beta1/g' ~/.kube/config
+          python3 /home/ec2-user/fix_kubeconfig.py
           
           TEMP_DIR=\$(mktemp -d)
           cd \$TEMP_DIR
