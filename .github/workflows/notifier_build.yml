@@ -66,7 +66,7 @@ jobs:
           DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
         run: |
           scp -r -o StrictHostKeyChecking=no -i ~/.ssh/bastion_key.pem ../.github/manifests/* ec2-user@$BASTION_IP:/home/ec2-user/manifests/
-          scp -o StrictHostKeyChecking=no -i ~/.ssh/bastion_key.pem ../.github/scripts/fix_kubeconfig.py ec2-user@$BASTION_IP:/home/ec2-user/ 
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/bastion_key.pem ../.github/scripts/deploy.sh ec2-user@$BASTION_IP:/home/ec2-user/ 
 
       - name: Deploy to kubernetes
         env:
@@ -78,33 +78,6 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/bastion_key.pem ec2-user@$BASTION_IP << EOF
           aws eks update-kubeconfig --region $DEFAULT_REGION --name $SERVICE-eks-cluster --alias $SERVICE
-          python3 /home/ec2-user/fix_kubeconfig.py
-          
-          TEMP_DIR=\$(mktemp -d)
-          cd \$TEMP_DIR
-          
-          substitute_vars() {
-            local file=\$1
-            sed \
-              -e "s|\\\${dpm_name}|dpm-${SERVICE}|g" \
-              -e "s|\\\${cfm_name}|cfm-database-${SERVICE}|g" \
-              -e "s|\\\${sec_name}|sec-app-${SERVICE}|g" \
-              -e "s|\\\${app_sec_name}|sec-app-${SERVICE}|g" \
-              -e "s|\\\${dpm_image}|${DPM_IMAGE}|g" \
-              -e "s|\\\${load_balancer_name}|svc-app-lb-${SERVICE}|g" \
-              -e "s|\\\${target_group_arn}|${NLB_TARGET_GROUP_ARN}|g" \
-              -e "s|\\\${tgb_name}|tgb-${SERVICE}|g" \
-              -e "s|\\\${hpa_name}|hpa-app-${SERVICE}|g" \
-              -e "s|\\\${region}|${DEFAULT_REGION}|g" \
-              "\$file"
-          }
-          
-          for manifest in cfm_database.yaml sec_app.yaml svc_app.yaml dpm_app.yaml hpa_app.yaml nlb_tgb.yaml; do
-            echo "Deploying \$manifest..."
-            substitute_vars "/home/ec2-user/manifests/\$manifest" | kubectl apply --validate=false -f -
-          done
-          
-          rm -rf \$TEMP_DIR
+          bash /home/ec2-user/deploy.sh $SERVICE $DPM_IMAGE $NLB_TARGET_GROUP_ARN $DEFAULT_REGION
           EOF
-          
           rm ~/.ssh/bastion_key.pem
