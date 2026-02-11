@@ -34,16 +34,6 @@ spec:
             initialDelaySeconds: 15
             periodSeconds: 60
           env:
-            - name: API_PWD
-              valueFrom:
-                secretKeyRef:
-                  name: "${app_sec_name}"
-                  key: API_PWD
-            - name: API_USER
-              valueFrom:
-                secretKeyRef:
-                  name: "${app_sec_name}"
-                  key: API_USER
             - name: DRIVER_NAME
               valueFrom:
                 configMapKeyRef:

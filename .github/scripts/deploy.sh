@@ -25,13 +25,11 @@ aws eks update-kubeconfig --region $DEFAULT_REGION --name $SERVICE-eks-cluster -
 TEMP_DIR=$(mktemp -d)
 cd $TEMP_DIR
 
-for manifest in cfm_database.yaml sec_app.yaml svc_app.yaml dpm_app.yaml hpa_app.yaml nlb_tgb.yaml; do
+for manifest in cfm_database.yaml svc_app.yaml dpm_app.yaml hpa_app.yaml nlb_tgb.yaml; do
   echo "Deploying $manifest..."
   sed \
     -e "s|\${dpm_name}|dpm-${SERVICE}|g" \
     -e "s|\${cfm_name}|cfm-database-${SERVICE}|g" \
-    -e "s|\${sec_name}|sec-app-${SERVICE}|g" \
-    -e "s|\${app_sec_name}|sec-app-${SERVICE}|g" \
     -e "s|\${dpm_image}|${DPM_IMAGE}|g" \
     -e "s|\${load_balancer_name}|svc-app-lb-${SERVICE}|g" \
     -e "s|\${target_group_arn}|${NLB_TARGET_GROUP_ARN}|g" \
