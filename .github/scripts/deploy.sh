@@ -29,3 +29,4 @@ for manifest in cfm_database.yaml sec_app.yaml svc_app.yaml dpm_app.yaml hpa_app
 done
 
 rm -rf $TEMP_DIR
+
