@@ -6,8 +6,10 @@ DPM_IMAGE=$2
 NLB_TARGET_GROUP_ARN=$3
 DEFAULT_REGION=$4
 
-aws eks update-kubeconfig --region $DEFAULT_REGION --name $SERVICE-eks-cluster --alias $SERVICE
-sed -i 's/client.authentication.k8s.io\/v1alpha1/client.authentication.k8s.io\/v1beta1/g' ~/.kube/config
+# Get the role ARN from the current AWS identity
+ROLE_ARN=$(aws sts get-caller-identity --query Arn --output text)
+
+aws eks update-kubeconfig --region $DEFAULT_REGION --name $SERVICE-eks-cluster --alias $SERVICE --role-arn $ROLE_ARN
 
 TEMP_DIR=$(mktemp -d)
 cd $TEMP_DIR
