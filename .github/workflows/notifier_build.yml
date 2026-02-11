@@ -77,7 +77,6 @@ jobs:
           DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/bastion_key.pem ec2-user@$BASTION_IP << EOF
-          aws eks update-kubeconfig --region $DEFAULT_REGION --name $SERVICE-eks-cluster --alias $SERVICE
           bash /home/ec2-user/deploy.sh $SERVICE $DPM_IMAGE $NLB_TARGET_GROUP_ARN $DEFAULT_REGION
           EOF
           rm ~/.ssh/bastion_key.pem
