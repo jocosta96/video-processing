@@ -6,6 +6,19 @@ DPM_IMAGE=$2
 NLB_TARGET_GROUP_ARN=$3
 DEFAULT_REGION=$4
 
+# Install AWS CLI v2 if not already installed
+if [ ! -f /usr/local/bin/aws ]; then
+  echo "Installing AWS CLI v2..."
+  cd /tmp
+  curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+  unzip -q awscliv2.zip
+  sudo ./aws/install
+  rm -rf aws awscliv2.zip
+fi
+
+# Use AWS CLI v2
+export PATH=/usr/local/bin:$PATH
+
 aws eks update-kubeconfig --region $DEFAULT_REGION --name $SERVICE-eks-cluster --alias $SERVICE
 
 TEMP_DIR=$(mktemp -d)
@@ -24,7 +37,7 @@ for manifest in cfm_database.yaml sec_app.yaml svc_app.yaml dpm_app.yaml hpa_app
     -e "s|\${tgb_name}|tgb-${SERVICE}|g" \
     -e "s|\${hpa_name}|hpa-app-${SERVICE}|g" \
     -e "s|\${region}|${DEFAULT_REGION}|g" \
-    "/home/ec2-user/manifests/$manifest" | kubectl apply --insecure-skip-tls-verify --validate=false -f -
+    "/home/ec2-user/manifests/$manifest" | kubectl apply --validate=false -f -
 done
 
 rm -rf $TEMP_DIR
