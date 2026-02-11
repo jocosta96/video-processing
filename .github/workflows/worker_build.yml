@@ -47,7 +47,7 @@ jobs:
         id: bastion
         run: |
           BASTION_IP=$(aws ssm get-parameter --name "/video-processing/bastion/public_dns" --query 'Parameter.Value' --output text)
-          NLB_ARN=$(aws ssm get-parameter --name "/video-processing/nlb/arn" --query 'Parameter.Value' --output text)
+          NLB_ARN=$(aws ssm get-parameter --name "/video-processing/nlb_tg/arn" --query 'Parameter.Value' --output text)
           ECR_URL=${{ env.ECR_URL }}
 
           echo "ip=$BASTION_IP" >> $GITHUB_OUTPUT
