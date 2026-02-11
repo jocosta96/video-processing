@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "${dpm_name}"
+  namespace: "default"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: "${dpm_name}"
+  template:
+    metadata:
+      labels:
+        app: "${dpm_name}"
+    spec:
+      containers:
+        - name: app
+          image: "${dpm_image}"
+          securityContext:
+            allowPrivilegeEscalation: false
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 60
+            failureThreshold: 3
+            periodSeconds: 60
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 60
+          env:
+            - name: DRIVER_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: "${cfm_name}"
+                  key: DRIVER_NAME
+            - name: DEBUG
+              valueFrom:
+                configMapKeyRef:
+                  name: "${cfm_name}"
+                  key: DEBUG
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: "${cfm_name}"
+                  key: LOG_LEVEL
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "250m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          command: ["sh", "-c"]
+          args:
+            - |
+              python infra/scripts/database_migration.py init
+              python infra/scripts/init_db.py --sample-data
+              exec uvicorn src.main:app --host 0.0.0.0 --port 8080

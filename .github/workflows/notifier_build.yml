@@ -1,0 +1,82 @@
+name: Notifier Build and Deploy
+
+env:
+  SERVICE_PATH: fiapx-notifier
+  SERVICE_NAME: notifier
+  TF_VERSION: "1.14.1"
+  ECR_URL: 092649322140.dkr.ecr.us-east-1.amazonaws.com/dockerhub/video-processing-notifier
+
+on:
+  workflow_dispatch: {}
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'fiapx-notifier/**/*'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    defaults:
+      run:
+        working-directory: ${{ env.SERVICE_PATH }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+          role-duration-seconds: 3600
+
+      - name: Get SSM Data
+        id: bastion
+        run: |
+          BASTION_IP=$(aws ssm get-parameter --name "/video-processing/bastion/public_dns" --query 'Parameter.Value' --output text)
+          NLB_ARN=$(aws ssm get-parameter --name "/video-processing/nlb_tg/arn" --query 'Parameter.Value' --output text)
+          ECR_URL=${{ env.ECR_URL }}
+
+          echo "ip=$BASTION_IP" >> $GITHUB_OUTPUT
+          echo "nlb_arn=$NLB_ARN" >> $GITHUB_OUTPUT
+          echo "ecr_url=$ECR_URL" >> $GITHUB_OUTPUT        
+
+      - name: Get EC2 instance key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VIDEO_PROCESSING_SSH_KEY_PAIR_VALUE }}" > ~/.ssh/bastion_key.pem
+          chmod 600 ~/.ssh/bastion_key.pem
+
+      - name: Deploy manifests to bastion
+        env:
+          BASTION_IP: ${{ steps.bastion.outputs.ip }}
+          DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+        run: |
+          scp -r -o StrictHostKeyChecking=no -i ~/.ssh/bastion_key.pem ../.github/manifests/* ec2-user@$BASTION_IP:/home/ec2-user/manifests/
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/bastion_key.pem ../.github/scripts/deploy.sh ec2-user@$BASTION_IP:/home/ec2-user/ 
+
+      - name: Deploy to kubernetes
+        env:
+          BASTION_IP: ${{ steps.bastion.outputs.ip }}
+          SERVICE: video-processing
+          DPM_IMAGE: ${{ steps.bastion.outputs.ecr_url }}
+          NLB_TARGET_GROUP_ARN: ${{ steps.bastion.outputs.nlb_arn }}
+          DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/bastion_key.pem ec2-user@$BASTION_IP << EOF
+          bash /home/ec2-user/deploy.sh $SERVICE $DPM_IMAGE $NLB_TARGET_GROUP_ARN $DEFAULT_REGION
+          EOF
+          rm ~/.ssh/bastion_key.pem

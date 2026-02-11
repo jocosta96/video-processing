@@ -1,0 +1,11 @@
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: "${tgb_name}"
+  namespace: "default"
+spec:
+  serviceRef:
+    name: "${load_balancer_name}"
+    port: 80
+  targetGroupARN: "${target_group_arn}"
+  targetType: "ip"
