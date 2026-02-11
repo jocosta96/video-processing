@@ -77,6 +77,7 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/bastion_key.pem ec2-user@$BASTION_IP << EOF
           aws eks update-kubeconfig --region $DEFAULT_REGION --name $SERVICE-eks-cluster --alias $SERVICE
+          sed -i 's/client.authentication.k8s.io\/v1alpha1/client.authentication.k8s.io\/v1beta1/g' ~/.kube/config
           
           TEMP_DIR=\$(mktemp -d)
           cd \$TEMP_DIR
