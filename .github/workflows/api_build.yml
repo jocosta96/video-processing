@@ -106,4 +106,3 @@ jobs:
           EOF
           
           rm ~/.ssh/bastion_key.pem
-
