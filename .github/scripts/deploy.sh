@@ -6,16 +6,7 @@ DPM_IMAGE=$2
 NLB_TARGET_GROUP_ARN=$3
 DEFAULT_REGION=$4
 
-# Get EKS cluster endpoint and certificate
-CLUSTER_ENDPOINT=$(aws eks describe-cluster --region $DEFAULT_REGION --name $SERVICE-eks-cluster --query 'cluster.endpoint' --output text)
-CLUSTER_CA=$(aws eks describe-cluster --region $DEFAULT_REGION --name $SERVICE-eks-cluster --query 'cluster.certificateAuthority.data' --output text)
-
-# Get authentication token
-TOKEN=$(aws eks get-token --region $DEFAULT_REGION --cluster-name $SERVICE-eks-cluster --query 'status.token' --output text)
-
-# Write CA cert to temp file
-CA_FILE=$(mktemp)
-echo "$CLUSTER_CA" | base64 -d > $CA_FILE
+aws eks update-kubeconfig --region $DEFAULT_REGION --name $SERVICE-eks-cluster --alias $SERVICE
 
 TEMP_DIR=$(mktemp -d)
 cd $TEMP_DIR
@@ -33,12 +24,7 @@ for manifest in cfm_database.yaml sec_app.yaml svc_app.yaml dpm_app.yaml hpa_app
     -e "s|\${tgb_name}|tgb-${SERVICE}|g" \
     -e "s|\${hpa_name}|hpa-app-${SERVICE}|g" \
     -e "s|\${region}|${DEFAULT_REGION}|g" \
-    "/home/ec2-user/manifests/$manifest" | \
-    kubectl apply --validate=false \
-      --server="$CLUSTER_ENDPOINT" \
-      --certificate-authority="$CA_FILE" \
-      --token="$TOKEN" \
-      -f -
+    "/home/ec2-user/manifests/$manifest" | kubectl apply --insecure-skip-tls-verify --validate=false -f -
 done
 
-rm -rf $TEMP_DIR $CA_FILE
+rm -rf $TEMP_DIR
