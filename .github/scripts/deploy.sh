@@ -10,10 +10,11 @@ DEFAULT_REGION=$4
 if [ ! -f /usr/local/bin/aws ]; then
   echo "Installing AWS CLI v2..."
   cd /tmp
-  curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+  curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
   unzip -q awscliv2.zip
   sudo ./aws/install
   rm -rf aws awscliv2.zip
+  cd -
 fi
 
 # Use AWS CLI v2
