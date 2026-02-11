@@ -6,10 +6,7 @@ DPM_IMAGE=$2
 NLB_TARGET_GROUP_ARN=$3
 DEFAULT_REGION=$4
 
-# Use aws-cli v2 explicitly
-export PATH=/usr/local/bin:$PATH
-
-/usr/local/bin/aws eks update-kubeconfig --region $DEFAULT_REGION --name $SERVICE-eks-cluster --alias $SERVICE
+aws eks update-kubeconfig --region $DEFAULT_REGION --name $SERVICE-eks-cluster --alias $SERVICE
 
 # Replace v1alpha1 with v1beta1 in kubeconfig
 sed -i 's/v1alpha1/v1beta1/g' ~/.kube/config
@@ -17,6 +14,7 @@ sed -i 's/v1alpha1/v1beta1/g' ~/.kube/config
 # Verify the replacement worked
 if grep -q "v1alpha1" ~/.kube/config; then
   echo "ERROR: Failed to replace v1alpha1 in kubeconfig"
+  cat ~/.kube/config
   exit 1
 fi
 
