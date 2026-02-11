@@ -6,8 +6,19 @@ DPM_IMAGE=$2
 NLB_TARGET_GROUP_ARN=$3
 DEFAULT_REGION=$4
 
-aws eks update-kubeconfig --region $DEFAULT_REGION --name $SERVICE-eks-cluster --alias $SERVICE
+# Use aws-cli v2 explicitly
+export PATH=/usr/local/bin:$PATH
+
+/usr/local/bin/aws eks update-kubeconfig --region $DEFAULT_REGION --name $SERVICE-eks-cluster --alias $SERVICE
+
+# Replace v1alpha1 with v1beta1 in kubeconfig
 sed -i 's/v1alpha1/v1beta1/g' ~/.kube/config
+
+# Verify the replacement worked
+if grep -q "v1alpha1" ~/.kube/config; then
+  echo "ERROR: Failed to replace v1alpha1 in kubeconfig"
+  exit 1
+fi
 
 TEMP_DIR=$(mktemp -d)
 cd $TEMP_DIR
@@ -29,4 +40,3 @@ for manifest in cfm_database.yaml sec_app.yaml svc_app.yaml dpm_app.yaml hpa_app
 done
 
 rm -rf $TEMP_DIR
-
