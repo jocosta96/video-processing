@@ -6,17 +6,12 @@ DPM_IMAGE=$2
 NLB_TARGET_GROUP_ARN=$3
 DEFAULT_REGION=$4
 
-aws eks update-kubeconfig --region $DEFAULT_REGION --name $SERVICE-eks-cluster --alias $SERVICE
+# Get EKS cluster endpoint and certificate
+CLUSTER_ENDPOINT=$(aws eks describe-cluster --region $DEFAULT_REGION --name $SERVICE-eks-cluster --query 'cluster.endpoint' --output text)
+CLUSTER_CA=$(aws eks describe-cluster --region $DEFAULT_REGION --name $SERVICE-eks-cluster --query 'cluster.certificateAuthority.data' --output text)
 
-# Replace v1alpha1 with v1beta1 in kubeconfig
-sed -i 's/v1alpha1/v1beta1/g' ~/.kube/config
-
-# Verify the replacement worked
-if grep -q "v1alpha1" ~/.kube/config; then
-  echo "ERROR: Failed to replace v1alpha1 in kubeconfig"
-  cat ~/.kube/config
-  exit 1
-fi
+# Get authentication token
+TOKEN=$(aws eks get-token --region $DEFAULT_REGION --cluster-name $SERVICE-eks-cluster --query 'status.token' --output text)
 
 TEMP_DIR=$(mktemp -d)
 cd $TEMP_DIR
@@ -34,7 +29,12 @@ for manifest in cfm_database.yaml sec_app.yaml svc_app.yaml dpm_app.yaml hpa_app
     -e "s|\${tgb_name}|tgb-${SERVICE}|g" \
     -e "s|\${hpa_name}|hpa-app-${SERVICE}|g" \
     -e "s|\${region}|${DEFAULT_REGION}|g" \
-    "/home/ec2-user/manifests/$manifest" | kubectl apply --validate=false -f -
+    "/home/ec2-user/manifests/$manifest" | \
+    kubectl apply --validate=false \
+      --server="$CLUSTER_ENDPOINT" \
+      --certificate-authority=<(echo "$CLUSTER_CA" | base64 -d) \
+      --token="$TOKEN" \
+      -f -
 done
 
 rm -rf $TEMP_DIR
