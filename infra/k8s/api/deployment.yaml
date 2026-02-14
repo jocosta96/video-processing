@@ -22,8 +22,8 @@ spec:
       enableServiceLinks: false
       containers:
         - name: api
-          image: fiapx-api:latest
-          imagePullPolicy: IfNotPresent
+          image: jocosta96/video-processing:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8000
               protocol: TCP

@@ -22,8 +22,8 @@ spec:
       enableServiceLinks: false
       containers:
         - name: notifier
-          image: fiapx-notifier:latest
-          imagePullPolicy: IfNotPresent
+          image: jocosta96/video-processing-notifier:latest
+          imagePullPolicy: Always
           envFrom:
             - configMapRef:
                 name: fiapx-config

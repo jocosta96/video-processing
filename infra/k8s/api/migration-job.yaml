@@ -31,8 +31,8 @@ spec:
               echo "PostgreSQL is ready!"
       containers:
         - name: migration
-          image: fiapx-api:latest
-          imagePullPolicy: IfNotPresent
+          image: jocosta96/video-processing:latest
+          imagePullPolicy: Always
           command: ["alembic", "upgrade", "head"]
           env:
             - name: DATABASE_URL

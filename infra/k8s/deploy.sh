@@ -39,28 +39,28 @@ is_minikube() {
 }
 
 # =============================================================================
-# Build Docker Images
+# Build Docker Images (Dev only)
 # =============================================================================
 build_images() {
-    log_info "Building Docker images..."
+    log_info "Building Docker images for local development..."
 
-    log_info "Building fiapx-api..."
-    docker build -t fiapx-api:latest "$PROJECT_ROOT/fiapx-api"
+    log_info "Building jocosta96/video-processing..."
+    docker build -t jocosta96/video-processing:latest "$PROJECT_ROOT/fiapx-api"
 
-    log_info "Building fiapx-worker..."
-    docker build -t fiapx-worker:latest "$PROJECT_ROOT/fiapx-worker"
+    log_info "Building jocosta96/video-processing-worker..."
+    docker build -t jocosta96/video-processing-worker:latest "$PROJECT_ROOT/fiapx-worker"
 
-    log_info "Building fiapx-notifier..."
-    docker build -t fiapx-notifier:latest "$PROJECT_ROOT/fiapx-notifier"
+    log_info "Building jocosta96/video-processing-notifier..."
+    docker build -t jocosta96/video-processing-notifier:latest "$PROJECT_ROOT/fiapx-notifier"
 
     log_info "All images built successfully!"
 
     # Load images into minikube if applicable
     if is_minikube; then
         log_info "Minikube detected. Loading images into minikube..."
-        minikube image load fiapx-api:latest
-        minikube image load fiapx-worker:latest
-        minikube image load fiapx-notifier:latest
+        minikube image load jocosta96/video-processing:latest
+        minikube image load jocosta96/video-processing-worker:latest
+        minikube image load jocosta96/video-processing-notifier:latest
         log_info "Images loaded into minikube."
     fi
 }
@@ -69,7 +69,7 @@ build_images() {
 # Deploy to Kubernetes
 # =============================================================================
 deploy() {
-    log_info "Deploying FIAP X to Kubernetes..."
+    log_info "Deploying FIAP X to Kubernetes (using DockerHub images)..."
 
     # Apply base resources first
     log_info "Creating namespace and config..."
@@ -283,8 +283,8 @@ case "${1:-deploy}" in
         echo "Usage: $0 {build|deploy|delete|status|logs|migrate|restart|port-forward}"
         echo ""
         echo "Commands:"
-        echo "  build          Build Docker images and deploy"
-        echo "  deploy         Deploy all resources to Kubernetes"
+        echo "  build          Build local images and deploy (dev only)"
+        echo "  deploy         Deploy using DockerHub images (default)"
         echo "  delete         Delete all resources"
         echo "  status         Show status of all resources"
         echo "  logs [svc]     Show logs (default: api)"

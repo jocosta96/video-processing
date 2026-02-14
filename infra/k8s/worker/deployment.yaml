@@ -22,8 +22,8 @@ spec:
       enableServiceLinks: false
       containers:
         - name: worker
-          image: fiapx-worker:latest
-          imagePullPolicy: IfNotPresent
+          image: jocosta96/video-processing-worker:latest
+          imagePullPolicy: Always
           envFrom:
             - configMapRef:
                 name: fiapx-config
