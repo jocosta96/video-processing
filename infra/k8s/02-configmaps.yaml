@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fiapx-config
+  namespace: fiapx
+  labels:
+    app.kubernetes.io/part-of: fiapx
+data:
+  # PostgreSQL
+  POSTGRES_DB: fiapx
+
+  # Redis
+  REDIS_URL: "redis://redis:6379"
+
+  # MinIO
+  MINIO_ENDPOINT: "http://minio:9000"
+  MINIO_EXTERNAL_ENDPOINT: "http://minio:9000"
+  MINIO_BUCKET: "fiapx-videos"
+
+  # Notifier
+  SMTP_HOST: mailhog
+  SMTP_PORT: "1025"
+  EMAIL_FROM: "noreply@fiapx.com"
+
+  # Worker
+  WORKER_CONCURRENCY: "2"
+
+  # Debug
+  DEBUG: "true"

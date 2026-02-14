@@ -1,0 +1,63 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: fiapx
+
+resources:
+  # Base
+  - 00-namespace.yaml
+  - 01-secrets.yaml
+  - 02-configmaps.yaml
+
+  # Infrastructure - Database
+  - postgres/pvc.yaml
+  - postgres/deployment.yaml
+  - postgres/service.yaml
+
+  # Infrastructure - Cache
+  - redis/pvc.yaml
+  - redis/deployment.yaml
+  - redis/service.yaml
+
+  # Infrastructure - Message Broker
+  - rabbitmq/pvc.yaml
+  - rabbitmq/deployment.yaml
+  - rabbitmq/service.yaml
+
+  # Infrastructure - Object Storage
+  - minio/pvc.yaml
+  - minio/deployment.yaml
+  - minio/service.yaml
+  - minio/init-job.yaml
+
+  # Application - API Gateway
+  - api/deployment.yaml
+  - api/service.yaml
+  - api/hpa.yaml
+  - api/ingress.yaml
+  - api/migration-job.yaml
+
+  # Application - Video Worker
+  - worker/deployment.yaml
+  - worker/hpa.yaml
+
+  # Application - Notifier
+  - notifier/deployment.yaml
+
+  # Dev Tools - Email
+  - mailhog/deployment.yaml
+  - mailhog/service.yaml
+
+  # Monitoring
+  - monitoring/prometheus-configmap.yaml
+  - monitoring/prometheus-deployment.yaml
+  - monitoring/prometheus-service.yaml
+  - monitoring/grafana-pvc.yaml
+  - monitoring/grafana-deployment.yaml
+  - monitoring/grafana-service.yaml
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: fiapx
+      app.kubernetes.io/managed-by: kustomize
+    includeSelectors: false
