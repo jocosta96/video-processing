@@ -1,48 +1,34 @@
-# Stage 1: Build
-FROM python:3.11.12-alpine3.21 AS builder
+FROM python:3.11-alpine AS builder
 
-WORKDIR /code
+WORKDIR /app
 
-COPY ./requirements.txt /code/requirements.txt
+RUN apk add --no-cache gcc musl-dev libffi-dev postgresql-dev
 
-RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt \
-    && pip freeze > /code/requirements.lock
+COPY requirements.txt .
+RUN pip wheel --no-cache-dir --wheel-dir /app/wheels -r requirements.txt
 
-# Stage 2: Runtime
-FROM python:3.11.12-alpine3.21
+FROM python:3.11-alpine
 
-# Create non-root user
-RUN addgroup -g 1000 appuser && adduser -D -u 1000 -G appuser appuser
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-WORKDIR /code
+WORKDIR /app
 
-COPY --from=builder /code/requirements.lock /code/requirements.txt
-RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
+RUN apk add --no-cache curl libpq && \
+    adduser -D appuser
 
-# Copy configuration files
-#COPY ./alembic.ini /code/alembic.ini
+COPY --from=builder /app/wheels /wheels
+RUN pip install --no-cache /wheels/*
 
-# Copy the Clean Architecture source code
-COPY ./src /code/src
-
-# Copy the webhook directory
-#COPY ./webhook /code/webhook
-
-# Copy the infra scripts directory
-#COPY ./infra/scripts /code/infra/scripts
-
-# Set proper permissions for appuser
-RUN chown -R appuser:appuser /code
-
-# Set environment variables for Clean Architecture
-ENV PYTHONPATH=/code
-ENV PYTHONUNBUFFERED=1
+COPY --chown=appuser:appuser src/ ./src/
+COPY --chown=appuser:appuser alembic/ ./alembic/
+COPY --chown=appuser:appuser alembic.ini .
 
 USER appuser
 
-# Expose port
-EXPOSE 8080
+EXPOSE 8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

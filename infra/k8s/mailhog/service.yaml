@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mailhog
+  namespace: fiapx
+  labels:
+    app.kubernetes.io/name: mailhog
+    app.kubernetes.io/component: email-dev
+    app.kubernetes.io/part-of: fiapx
+spec:
+  type: ClusterIP
+  ports:
+    - port: 1025
+      targetPort: 1025
+      protocol: TCP
+      name: smtp
+    - port: 8025
+      targetPort: 8025
+      protocol: TCP
+      name: web
+  selector:
+    app.kubernetes.io/name: mailhog
