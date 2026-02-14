@@ -1,23 +1,29 @@
-FROM python:3.11-slim
-
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
+FROM python:3.11-alpine AS builder
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache gcc musl-dev libffi-dev postgresql-dev
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip wheel --no-cache-dir --wheel-dir /app/wheels -r requirements.txt
 
-COPY src/ ./src/
-COPY alembic/ ./alembic/
-COPY alembic.ini .
+FROM python:3.11-alpine
 
-RUN useradd --create-home appuser && chown -R appuser:appuser /app
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+RUN apk add --no-cache curl libpq && \
+    adduser -D appuser
+
+COPY --from=builder /app/wheels /wheels
+RUN pip install --no-cache /wheels/*
+
+COPY --chown=appuser:appuser src/ ./src/
+COPY --chown=appuser:appuser alembic/ ./alembic/
+COPY --chown=appuser:appuser alembic.ini .
+
 USER appuser
 
 EXPOSE 8000
